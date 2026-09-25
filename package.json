@@ -11,11 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@huggingface/transformers": "4.3.0",
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-popover": "1.1.23",
     "lucide-react": "1.48.0",
@@ -25,6 +26,8 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
     "@eslint/compat": "2.1.1",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.2",

@@ -16,7 +16,9 @@ from ingest.models import RunStats
 
 def run_ingest(database_url: str, client: httpx.Client) -> RunStats:
     stats = RunStats()
-    with psycopg.connect(database_url, autocommit=True, connect_timeout=15) as connection:
+    with psycopg.connect(
+        database_url, autocommit=True, connect_timeout=15, prepare_threshold=None
+    ) as connection:
         run_id = connection.execute(
             "INSERT INTO maiven.ingest_runs (status) VALUES ('running') RETURNING id"
         ).fetchone()[0]
