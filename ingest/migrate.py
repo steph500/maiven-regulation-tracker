@@ -45,7 +45,9 @@ def migrate(database_url: str, *, vectors: bool = False) -> None:
 def main() -> None:
     load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--vectors", action="store_true", help="Also install optional pgvector schema")
+    parser.add_argument(
+        "--vectors", action="store_true", help="Also install optional pgvector schema"
+    )
     args = parser.parse_args()
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:

@@ -19,5 +19,8 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["ingest"]
+
 [tool.setuptools.packages.find]
 include = ["ingest*"]
