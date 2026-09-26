@@ -4,11 +4,11 @@
 
 A small end-to-end regulatory pipeline: Python ingests 100 recent EPA Rules from the US Federal Register, PostgreSQL preserves normalized records, and a single Next.js page makes them searchable.
 
-**Deployment status:** the managed database is seeded with 100 real documents and compatible embeddings. Public web deployment is pending account sign-in; no live URL is claimed yet. The screenshot below is the local production build using that database.
+**Live application:** [maiven-regulation-tracker.vercel.app](https://maiven-regulation-tracker.vercel.app). Seeded with 100 real documents and compatible embeddings; keyword, semantic and hybrid search are verified in production. The screenshot below is captured from the public deployment.
 
 ![Regulation Tracker desktop view](docs/screenshots/desktop.jpg)
 
-[Mobile screenshot](docs/screenshots/mobile.jpg) · [Requirements](docs/requirements.md) · [Architecture and sequence diagrams](docs/architecture.md) · [Schema and ERD](docs/database.md) · [API contract](docs/api.md) · [Engineering decisions](docs/decisions.md)
+[Mobile screenshot](docs/screenshots/mobile.jpg) · [Acceptance checklist](docs/acceptance-checklist.md) · [Requirements](docs/requirements.md) · [Architecture and sequence diagrams](docs/architecture.md) · [Schema and ERD](docs/database.md) · [API contract](docs/api.md) · [Engineering decisions](docs/decisions.md)
 
 ## Assessment scope
 
@@ -195,13 +195,13 @@ node scripts/capture-ui.mjs
 
 On Linux, `pnpm exec playwright install --with-deps chromium` installs required browser system libraries. E2E tests use real API calls for browsing, search, dates, pagination and semantic/hybrid modes. Error/empty/history cases use explicit browser-only fixtures; these never enter production storage. Screenshots are captured from a running app after its real count and first 20 records load.
 
-Verified locally: **29 Python tests, 33 TypeScript tests and 8 browser tests**. Python covers cleaning, malformed data, misleading pagination metadata, atomic failure, concurrent reruns, history and embedding invalidation. TypeScript executes required route queries against PostgreSQL and semantic SQL against PGlite with its pgvector extension. Browser tests run desktop and mobile journeys.
+Verified: **29 Python tests, 33 TypeScript tests and 8 browser tests**. All eight browser tests also passed against the public production deployment. Python covers cleaning, malformed data, misleading pagination metadata, atomic failure, concurrent reruns, history and embedding invalidation. TypeScript executes required route queries against PostgreSQL and semantic SQL against PGlite with its pgvector extension. Browser tests run desktop and mobile journeys.
 
 [GitHub Actions](.github/workflows/ci.yml) runs Python lint/format/tests, TypeScript lint/typecheck/tests and a production build on pushes and pull requests, with a fresh PostgreSQL service and no production secrets. The live-source browser suite runs separately so CI does not depend on Federal Register availability or downloading a model. There are no scheduled ingestion jobs.
 
 ## Deployment
 
-The intended web host is Vercel. The database uses the existing Haulio Supabase project, isolated in `maiven`; no extra database project was created. Existing applications and schemas are untouched. The web login has SELECT access only to Maiven documents/history/embeddings. The ingestion login has narrowly scoped read/insert/update grants and row-level policies, with no delete access. Neither can access unrelated application tables.
+The web application is deployed on Vercel and connected to this repository for future pushes. The database uses the existing Haulio Supabase project, isolated in `maiven`; no extra database project was created. Existing applications and schemas are untouched. The web login has SELECT access only to Maiven documents/history/embeddings. The ingestion login has narrowly scoped read/insert/update grants and row-level policies, with no delete access. Neither can access unrelated application tables.
 
 1. Import this repository as a Next.js project and select Node.js 24.
 2. Install with pnpm 11.25.0 and build with `pnpm build`.
@@ -211,7 +211,7 @@ The intended web host is Vercel. The database uses the existing Haulio Supabase 
 
 For Supabase's transaction pooler, use its provided pooled connection host with verified TLS. The public CA at `db/certs/supabase-ca.crt` is included in API bundles; the URL can use `sslmode=verify-full&sslrootcert=db/certs/supabase-ca.crt`. Do not disable certificate checks. The Python ingestion connection disables prepared statements for pooler compatibility; each web process caps its pool at three connections.
 
-No embedding-service secret is needed. Model download and native ONNX execution require outbound HTTPS, a writable temporary directory and a compatible Node runtime. Public deployment and its cold-start behavior remain unverified until account sign-in is completed; database readiness alone is not a successful web deployment.
+No embedding-service secret is needed. Model download and native ONNX execution require outbound HTTPS, a writable temporary directory and a compatible Node runtime. The deployed native CPU runtime and public search modes were verified: the first semantic request took about 3.5 seconds and the next hybrid request about 0.6 seconds in one smoke run. These measurements are observations, not a latency guarantee. The deployment explicitly traces the native library through its canonical pnpm path and skips unused GPU downloads.
 
 ## Assumptions, tradeoffs and limitations
 
@@ -222,7 +222,7 @@ No embedding-service secret is needed. Model download and native ONNX execution 
 - Local embeddings avoid API keys and per-request embedding fees, but consume server CPU/memory and add cold-start model-download latency. Temporary caches may be evicted.
 - The brief asked for a small exercise; versioning and semantic search deliberately remain separable additions. Custom CSS keeps the visual design small without introducing a large UI framework.
 - There is no scheduler, write API, account system or operational alerting. Source changes appear only after an explicit ingestion run. The optional manual production-ingest workflow is not configured.
-- Public web deployment is the remaining operational acceptance item. Hosting still uses the existing account's normal resources; sharing a database project does not mean computation is free.
+- Hosting uses the existing account's normal resources; sharing a database project does not mean computation is free. See the [acceptance checklist](docs/acceptance-checklist.md) for executed production evidence.
 
 ## What I would do differently with more time
 
