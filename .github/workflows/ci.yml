@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: maiven
+          POSTGRES_PASSWORD: maiven
+          POSTGRES_DB: maiven_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U maiven -d maiven_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://maiven:maiven@127.0.0.1:5432/maiven_test
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Python lint and format
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Python unit and PostgreSQL integration tests
+        run: pytest -q
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: '11.25.0'
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: TypeScript lint, typecheck and database tests
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+      - name: Production build
+        run: pnpm build
