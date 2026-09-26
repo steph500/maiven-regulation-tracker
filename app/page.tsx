@@ -1,3 +1,4 @@
+import { Tracker } from "@/components/search/tracker";
 export default function Page() {
-  return <main><h1>Regulation Tracker</h1><p>Application setup in progress.</p></main>;
+  return <Tracker />;
 }
