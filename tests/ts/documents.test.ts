@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { GET } from '@/app/api/documents/route';
+import { GET as history } from '@/app/api/documents/[id]/versions/route';
 import { getPool } from '@/lib/db/pool';
 import type { DocumentPage } from '@/types/documents';
 
@@ -62,5 +63,20 @@ describe('required documents API against PostgreSQL', () => {
     const result = await request(query);
     expect(result.status).toBe(400);
     expect((await result.json()).error).toBeTypeOf('string');
+  });
+  it('returns actual immutable history newest version first', async () => {
+    const { items } = await page();
+    const id = items[0].id;
+    await getPool().query(`INSERT INTO maiven.document_versions
+      (document_id, version_number, title, publication_date, html_url, content_hash, agencies)
+      SELECT id, n, 'Snapshot ' || n, publication_date, html_url, content_hash, agencies
+      FROM maiven.documents CROSS JOIN generate_series(1, 2) n WHERE id = $1`, [id]);
+    const response = await history(new Request('http://localhost'), { params: Promise.resolve({ id }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).items.map((v: { version_number: number }) => v.version_number)).toEqual([2, 1]);
+  });
+  it.each([['not-a-uuid', 400], ['11111111-1111-4111-8111-111111111111', 404]])('validates history lookup: %s', async (id, status) => {
+    const response = await history(new Request('http://localhost'), { params: Promise.resolve({ id: String(id) }) });
+    expect(response.status).toBe(status);
   });
 });
